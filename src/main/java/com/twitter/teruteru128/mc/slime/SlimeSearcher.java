@@ -50,6 +50,7 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 		long currentSeed = 0;
 		int exChunkX = 0;
 		int exChunkZ = 0;
+		long taskStarted = System.currentTimeMillis();
 		for (int i = 0; i < searchSeeds; i++) {
 			// XXX イニシャルシードをインクリメントしてカレントシードに設定しても問題ないのでは？
 			currentSeed = initialSeed++;
@@ -73,14 +74,16 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 							SearchResult result = new SearchResult(currentSeed, chunkX, chunkZ, slimeChunkCount,
 									chunkCount);
 							results.add(result);
-							System.out.printf("won! : %s,%s(%s)%n", result, Thread.currentThread().toString(),
-									LocalDateTime.now());
+							System.out.printf("won! : %s(%s)%n", result, LocalDateTime.now());
 						}
 					}
 				}
 			}
 		}
-		System.out.printf("max : %d%n", max);
+		long taskFinished = System.currentTimeMillis();
+		long diff = taskFinished - taskStarted;
+		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRengeX * countRengeZ,
+				(double) searchSeeds / (diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
 		return results;
 	}
 }
