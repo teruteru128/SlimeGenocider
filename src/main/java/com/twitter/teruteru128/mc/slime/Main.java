@@ -33,9 +33,10 @@ public class Main {
 		final int zRange = 4;
 		final int minSlimeChunk = 14;
 		final int iteration = 10;
-		final int tasksPerSection = 128;
+		final int processors = Runtime.getRuntime().availableProcessors();
+		final int tasksPerSection = processors * 10;
 		final int searcherTaskSize = 65536;
-		ExecutorService service = Executors.newWorkStealingPool(6);
+		ExecutorService service = Executors.newWorkStealingPool((int)(processors * 0.75));
 		SecureRandom random = new SecureRandom();
 		List<SlimeSearcher> tasks = new LinkedList<>();
 		Path outPath = Paths.get(".", "out.csv");
