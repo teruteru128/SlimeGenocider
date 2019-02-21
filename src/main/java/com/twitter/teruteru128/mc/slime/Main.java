@@ -76,6 +76,7 @@ public class Main {
 							subtotal++;
 						}
 					}
+					stream.flush();
 					Duration diff = Duration.between(sectionStart, sectionFinish);
 					totalSlimeChunkSeeds += subtotal;
 					System.out.printf(
