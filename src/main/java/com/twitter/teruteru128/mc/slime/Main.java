@@ -24,19 +24,21 @@ import java.util.concurrent.Future;
 public class Main {
 
 	public static void main(String[] args) {
+		// 北西のチャンク座標
 		final long minSearchChunkX = -313;
 		final long minSearchChunkZ = -313;
-
+		// 南東のチャンク座標
 		final long maxSearchChunkX = 312;
 		final long maxSearchChunkZ = 312;
 		final int xRange = 4;
 		final int zRange = 4;
 		final int minSlimeChunk = 14;
-		final int iteration = 10;
+		final int iteration = 128;
 		final int processors = Runtime.getRuntime().availableProcessors();
-		final int tasksPerSection = processors * 10;
-		final int searcherTaskSize = 65536;
-		ExecutorService service = Executors.newWorkStealingPool((int)(processors * 0.75));
+		final int useThreads = (int) (processors * 0.75);
+		final int tasksPerSection = useThreads * 4 / 3 * 12;
+		final int searcherTaskSize = 2048;
+		ExecutorService service = Executors.newWorkStealingPool(useThreads);
 		SecureRandom random = new SecureRandom();
 		List<SlimeSearcher> tasks = new LinkedList<>();
 		Path outPath = Paths.get(".", "out.csv");
@@ -80,14 +82,14 @@ public class Main {
 					Duration diff = Duration.between(sectionStart, sectionFinish);
 					totalSlimeChunkSeeds += subtotal;
 					System.out.printf(
-							"subtotal : This section is %d seeds searched, %d seed(s) found and %dseeds/s. Total %d seeds searched.(%s)%n",
+							"subtotal : This section is %d seeds searched, %d seed(s) found and saved. %dseeds/s Total %d seeds searched.(%s)%n",
 							sectionSeedSize, subtotal, sectionSeedSize / (diff.toMillis() / 1000), searchedSeedSize,
 							formatter.format(sectionFinish));
 					tasks.clear();
 				}
 				System.out.printf("total : %d seeds found in %d seeds. %.2fseeds/s (%s)%n", totalSlimeChunkSeeds,
 						searchedSeedSize,
-						searchedSeedSize / (Duration.between(generalStart, sectionFinish).toMillis() / 1000),
+						(double)searchedSeedSize / (Duration.between(generalStart, sectionFinish).toMillis() / 1000),
 						formatter.format(LocalDateTime.now()));
 			}
 		} catch (InterruptedException | ExecutionException | IOException e) {
