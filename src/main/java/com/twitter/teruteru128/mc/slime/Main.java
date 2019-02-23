@@ -36,7 +36,7 @@ public class Main {
 		final int iteration = 128;
 		final int processors = Runtime.getRuntime().availableProcessors();
 		final int useThreads = (int) (processors * 0.75);
-		final int tasksPerSection = useThreads * 4 / 3 * 12;
+		final int tasksPerSection = useThreads * 12;
 		final int searcherTaskSize = 2048;
 		ExecutorService service = Executors.newWorkStealingPool(useThreads);
 		SecureRandom random = new SecureRandom();
