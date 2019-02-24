@@ -1,6 +1,7 @@
 package com.twitter.teruteru128.mc.slime;
 
 import java.time.LocalDateTime;
+import java.util.BitSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -38,8 +39,15 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 		long maxChunkZ = this.maxChunkZ;
 		int countRengeX = this.countRengeX;
 		int countRengeZ = this.countRengeZ;
+		maxChunkX -= countRengeX - 1;
+		maxChunkX -= countRengeZ - 1;
 		int minSlimeChunks = this.minSlimeChunks;
 		int searchSeeds = this.searchSeeds;
+		long offsetX = -minChunkX;
+		long offsetZ = -minChunkZ;
+		long searchRangeX = maxChunkX - minChunkX;
+		long searchRangeZ = maxChunkZ - minChunkZ;
+		BitSet slimeMemo = new BitSet((int) (searchRangeX * searchRangeZ));
 		int max = 0;
 		LinkedList<SearchResult> results = new LinkedList<>();
 		SlimeChunkOracle oracle = new SlimeChunkOracle(0);
@@ -52,19 +60,27 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 		int exChunkZ = 0;
 		long taskStarted = System.currentTimeMillis();
 		for (int i = 0; i < searchSeeds; i++) {
-			// XXX イニシャルシードをインクリメントしてカレントシードに設定しても問題ないのでは？
 			currentSeed = initialSeed++;
 			oracle.setSeed(currentSeed);
-			for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
-				for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
-					if (oracle.isSlimeChunk(chunkX, chunkZ)) {
+			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
+				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
+					// TODO getIndex関数化
+					slimeMemo.set((int) ((chunkZ + offsetZ) * searchRangeX + chunkX + offsetX),
+							oracle.isSlimeChunk(chunkX, chunkZ));
+				}
+			}
+			// TODO 探索アルゴリズム改良
+			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
+				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
+					if (slimeMemo.get((int) ((chunkZ + offsetZ) * searchRangeX + chunkX + offsetX))) {
 						slimeChunkCount = 0;
 						chunkCount = 0;
 						// TODO チェックを注入可能に
-						for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
-							for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
+						for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
+							for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
 								chunkCount++;
-								if (oracle.isSlimeChunk(chunkX + exChunkX, chunkZ + exChunkZ)) {
+								if (slimeMemo.get((int) ((chunkZ + offsetZ + exChunkZ) * searchRangeX + chunkX + offsetX
+										+ exChunkX))) {
 									slimeChunkCount++;
 								}
 							}
@@ -79,11 +95,12 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 					}
 				}
 			}
+			slimeMemo.clear();
 		}
 		long taskFinished = System.currentTimeMillis();
 		long diff = taskFinished - taskStarted;
 		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRengeX * countRengeZ,
-				(double) searchSeeds / (diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
+				((double) searchSeeds / diff) / 1000, max >= minSlimeChunks ? "yay!!!" : "booooo");
 		return results;
 	}
 }
