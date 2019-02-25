@@ -1,7 +1,6 @@
 package com.twitter.teruteru128.mc.slime;
 
 import java.time.LocalDateTime;
-import java.util.BitSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -43,11 +42,6 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 		maxChunkX -= countRengeZ - 1;
 		int minSlimeChunks = this.minSlimeChunks;
 		int searchSeeds = this.searchSeeds;
-		long offsetX = -minChunkX;
-		long offsetZ = -minChunkZ;
-		long searchRangeX = maxChunkX - minChunkX;
-		long searchRangeZ = maxChunkZ - minChunkZ;
-		BitSet slimeMemo = new BitSet((int) (searchRangeX * searchRangeZ));
 		int max = 0;
 		LinkedList<SearchResult> results = new LinkedList<>();
 		SlimeChunkOracle oracle = new SlimeChunkOracle(0);
@@ -59,48 +53,54 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 		int exChunkX = 0;
 		int exChunkZ = 0;
 		long taskStarted = System.currentTimeMillis();
+		long z = -1;
+		long x = -1;
 		for (int i = 0; i < searchSeeds; i++) {
 			currentSeed = initialSeed++;
 			oracle.setSeed(currentSeed);
-			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
-				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
-					// TODO getIndex関数化
-					slimeMemo.set((int) ((chunkZ + offsetZ) * searchRangeX + chunkX + offsetX),
-							oracle.isSlimeChunk(chunkX, chunkZ));
-				}
-			}
-			// TODO 探索アルゴリズム改良
-			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
-				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
-					if (slimeMemo.get((int) ((chunkZ + offsetZ) * searchRangeX + chunkX + offsetX))) {
-						slimeChunkCount = 0;
-						chunkCount = 0;
-						// TODO チェックを注入可能に
-						for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
-							for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
-								chunkCount++;
-								if (slimeMemo.get((int) ((chunkZ + offsetZ + exChunkZ) * searchRangeX + chunkX + offsetX
-										+ exChunkX))) {
-									slimeChunkCount++;
+
+			// TODO DO TEST
+			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ += 2) {
+				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX += 2) {
+					if (oracle.isSlimeChunk(chunkX + 2, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ + 2)) {
+						if (oracle.isSlimeChunk(chunkX, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ)) {
+							// TODO チェックを注入可能に
+							for (z = -1; z < 1; z++) {
+								for (x = -1; x < 1; x++) {
+									slimeChunkCount = 4;
+									chunkCount = 4;
+									for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
+										for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
+											if ((x + exChunkX) % 2 != 0 || (z + exChunkZ) % 2 != 0) {
+												// System.out.printf("%d, %d%n", x + exChunkX, z + exChunkZ);
+												chunkCount++;
+												if (oracle.isSlimeChunk(chunkX + exChunkX + x, chunkZ + exChunkZ + z)) {
+													slimeChunkCount++;
+												}
+											}
+										}
+									}
+									max = Math.max(slimeChunkCount, max);
+									if (slimeChunkCount >= minSlimeChunks) {
+										SearchResult result = new SearchResult(currentSeed, chunkX + x, chunkZ + z,
+												slimeChunkCount, chunkCount);
+										results.add(result);
+										System.out.printf("won! : %s, %d(x=%d,z=%d,%s)%n", result, chunkCount, x, z,
+												LocalDateTime.now());
+									}
 								}
 							}
 						}
-						max = Math.max(slimeChunkCount, max);
-						if (slimeChunkCount >= minSlimeChunks) {
-							SearchResult result = new SearchResult(currentSeed, chunkX, chunkZ, slimeChunkCount,
-									chunkCount);
-							results.add(result);
-							System.out.printf("won! : %s(%s)%n", result, LocalDateTime.now());
-						}
+					} else {
+						chunkX += 2;
 					}
 				}
 			}
-			slimeMemo.clear();
 		}
 		long taskFinished = System.currentTimeMillis();
 		long diff = taskFinished - taskStarted;
 		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRengeX * countRengeZ,
-				((double) searchSeeds / diff) / 1000, max >= minSlimeChunks ? "yay!!!" : "booooo");
+				searchSeeds / ((double) diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
 		return results;
 	}
 }

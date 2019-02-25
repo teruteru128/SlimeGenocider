@@ -32,12 +32,12 @@ public class Main {
 		final long maxSearchChunkZ = 312;
 		final int xRange = 4;
 		final int zRange = 4;
-		final int minSlimeChunk = 14;
-		final int iteration = 128;
+		final int minSlimeChunk = 15;
+		final int numberOfSections = 128;
 		final int processors = Runtime.getRuntime().availableProcessors();
-		final int useThreads = (int) (processors * 0.75);
+		final int useThreads = processors * 3 / 4;
 		final int tasksPerSection = useThreads * 12;
-		final int searcherTaskSize = 2048;
+		final int searcherTaskSize = 65536;
 		ExecutorService service = Executors.newWorkStealingPool(useThreads);
 		SecureRandom random = new SecureRandom();
 		List<SlimeSearcher> tasks = new LinkedList<>();
@@ -60,7 +60,7 @@ public class Main {
 				long sectionSeedSize = 0;
 				long searchedSeedSize = 0;
 				// 一度に8スレッドずつを32回
-				for (int i = 0; i < iteration; i++) {
+				for (int i = 0; i < numberOfSections; i++) {
 					sectionStart = LocalDateTime.now();
 					sectionSeedSize = 0;
 					for (int j = 0; j < tasksPerSection; j++) {
@@ -82,14 +82,14 @@ public class Main {
 					Duration diff = Duration.between(sectionStart, sectionFinish);
 					totalSlimeChunkSeeds += subtotal;
 					System.out.printf(
-							"subtotal : This section is %d seeds searched, %d seed(s) found and saved. %dseeds/s Total %d seeds searched.(%s)%n",
-							sectionSeedSize, subtotal, sectionSeedSize / (diff.toMillis() / 1000), searchedSeedSize,
-							formatter.format(sectionFinish));
+							"subtotal : This section is %d seeds searched, %d seed(s) found and saved. %.2fseeds/s Total %d seeds searched.(%s)%n",
+							sectionSeedSize, subtotal, sectionSeedSize / ((double) diff.toMillis() / 1000),
+							searchedSeedSize, formatter.format(sectionFinish));
 					tasks.clear();
 				}
 				System.out.printf("total : %d seeds found in %d seeds. %.2fseeds/s (%s)%n", totalSlimeChunkSeeds,
 						searchedSeedSize,
-						(double)searchedSeedSize / (Duration.between(generalStart, sectionFinish).toMillis() / 1000),
+						searchedSeedSize / ((double) Duration.between(generalStart, sectionFinish).toMillis() / 1000),
 						formatter.format(LocalDateTime.now()));
 			}
 		} catch (InterruptedException | ExecutionException | IOException e) {
