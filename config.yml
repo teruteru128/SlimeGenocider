@@ -1,0 +1,24 @@
+# チャンクを探索する範囲(チャンク単位)
+searchRange:
+  northWest:
+    x: -313
+    z: -313
+  southEast:
+    x: 312
+    z: 312
+
+# ターゲットのスライムチャンクの範囲と表示する最低チャンク数
+slimeChunk:
+  xRange: 4
+  zRange: 4
+  minSlimeChunks: 15
+
+multiProcessing:
+# 探索の反復回数
+  sectionIteration: 10
+# セクションあたりのタスク数
+  tasksPerSection: 18
+#1タスクあたりのシード数
+  seedsPerTask: 8192
+# スレッド数。0または設定なしだと全スレッドの75%
+  theadNum: 6
