@@ -32,11 +32,12 @@ public class Main {
 		final long maxSearchChunkZ = 312;
 		final int xRange = 4;
 		final int zRange = 4;
-		final int minSlimeChunk = 15;
+		final int minSlimeChunk = 16;
 		final int numberOfSections = 128;
 		final int processors = Runtime.getRuntime().availableProcessors();
 		final int useThreads = processors * 3 / 4;
-		final int tasksPerSection = useThreads * 12;
+		System.out.printf("Available processors is %d, using processors is %d%n", processors);
+		final int tasksPerSection = useThreads * 16;
 		final int searcherTaskSize = 65536;
 		ExecutorService service = Executors.newWorkStealingPool(useThreads);
 		SecureRandom random = new SecureRandom();
@@ -47,7 +48,8 @@ public class Main {
 		LocalDateTime sectionStart = LocalDateTime.now();
 		LocalDateTime sectionFinish = null;
 		System.out.printf("start : %s%n", formatter.format(generalStart));
-		try (FileChannel channel = FileChannel.open(outPath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+		try (FileChannel channel = FileChannel.open(outPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE,
+				StandardOpenOption.APPEND)) {
 			FileLock lock = channel.tryLock();
 			// Lockのnullチェックやらないといけないのめんどい
 			if (Objects.isNull(lock)) {
@@ -60,7 +62,7 @@ public class Main {
 				long sectionSeedSize = 0;
 				long searchedSeedSize = 0;
 				// 一度に8スレッドずつを32回
-				for (int i = 0; i < numberOfSections; i++) {
+				for (int currentSection = 0; currentSection < numberOfSections; currentSection++) {
 					sectionStart = LocalDateTime.now();
 					sectionSeedSize = 0;
 					for (int j = 0; j < tasksPerSection; j++) {
@@ -82,9 +84,10 @@ public class Main {
 					Duration diff = Duration.between(sectionStart, sectionFinish);
 					totalSlimeChunkSeeds += subtotal;
 					System.out.printf(
-							"subtotal : This section is %d seeds searched, %d seed(s) found and saved. %.2fseeds/s Total %d seeds searched.(%s)%n",
-							sectionSeedSize, subtotal, sectionSeedSize / ((double) diff.toMillis() / 1000),
-							searchedSeedSize, formatter.format(sectionFinish));
+							"subtotal : This %d/%d section is %d seeds searched, %d seed(s) found and saved. %.2fseeds/s Total %d seeds searched.(%s)%n",
+							currentSection + 1, numberOfSections, sectionSeedSize, subtotal,
+							sectionSeedSize / ((double) diff.toMillis() / 1000), searchedSeedSize,
+							formatter.format(sectionFinish));
 					tasks.clear();
 				}
 				System.out.printf("total : %d seeds found in %d seeds. %.2fseeds/s (%s)%n", totalSlimeChunkSeeds,
