@@ -32,58 +32,71 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 	@Override
 	public List<SearchResult> call() {
 		long initialSeed = this.initialSeed;
-		long minChunkX = this.minChunkX;
-		long maxChunkX = this.maxChunkX;
-		long minChunkZ = this.minChunkZ;
-		long maxChunkZ = this.maxChunkZ;
-		int countRengeX = this.countRengeX;
-		int countRengeZ = this.countRengeZ;
-		int minSlimeChunks = this.minSlimeChunks;
+		final int minChunkX = (int) this.minChunkX;
+		final int maxChunkX = (int) this.maxChunkX;
+		final int minChunkZ = (int) this.minChunkZ;
+		final int maxChunkZ = (int) this.maxChunkZ;
+		final int countRangeX = this.countRengeX;
+		final int countRangeZ = this.countRengeZ;
+		final int minSlimeChunks = this.minSlimeChunks;
 		int searchSeeds = this.searchSeeds;
 		int max = 0;
 		LinkedList<SearchResult> results = new LinkedList<>();
 		SlimeChunkOracle oracle = new SlimeChunkOracle(0);
-		long chunkX = 0;
-		long chunkZ = 0;
-		int slimeChunkCount = 0;
-		int chunkCount = 0;
-		long currentSeed = 0;
+		int chunkX = 0;
+		int chunkZ = 0;
 		int exChunkX = 0;
 		int exChunkZ = 0;
+		int z = -1;
+		int x = -1;
+		long currentSeed = 0;
+		int slimeChunkCount = 0;
+		int chunkCount = 0;
 		long taskStarted = System.currentTimeMillis();
 		for (int i = 0; i < searchSeeds; i++) {
-			// XXX イニシャルシードをインクリメントしてカレントシードに設定しても問題ないのでは？
 			currentSeed = initialSeed++;
 			oracle.setSeed(currentSeed);
-			for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
-				for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
-					if (oracle.isSlimeChunk(chunkX, chunkZ)) {
-						slimeChunkCount = 0;
-						chunkCount = 0;
-						// TODO チェックを注入可能に
-						for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
-							for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
-								chunkCount++;
-								if (oracle.isSlimeChunk(chunkX + exChunkX, chunkZ + exChunkZ)) {
-									slimeChunkCount++;
+
+			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ += 2) {
+				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX += 2) {
+					if (oracle.isSlimeChunk(chunkX + 2, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ + 2)) {
+						if (oracle.isSlimeChunk(chunkX, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ)) {
+							for (z = -1; z < 1; z++) {
+								for (x = -1; x < 1; x++) {
+									slimeChunkCount = 4;
+									chunkCount = 4;
+									for (exChunkZ = 0; exChunkZ < countRangeZ; exChunkZ++) {
+										for (exChunkX = 0; exChunkX < countRangeX; exChunkX++) {
+											if ((x + exChunkX) % 2 != 0 || (z + exChunkZ) % 2 != 0) {
+												chunkCount++;
+												if (oracle.isSlimeChunk(chunkX + exChunkX + x, chunkZ + exChunkZ + z)) {
+													slimeChunkCount++;
+												}
+											}
+										}
+									}
+									max = Math.max(slimeChunkCount, max);
+									if (slimeChunkCount >= minSlimeChunks) {
+										SearchResult result = new SearchResult(currentSeed, chunkX + x, chunkZ + z,
+												slimeChunkCount, chunkCount);
+										results.add(result);
+										System.out.printf("won! : %s, %d(%s)%n", result, chunkCount,
+												LocalDateTime.now());
+									}
 								}
 							}
 						}
-						max = Math.max(slimeChunkCount, max);
-						if (slimeChunkCount >= minSlimeChunks) {
-							SearchResult result = new SearchResult(currentSeed, chunkX, chunkZ, slimeChunkCount,
-									chunkCount);
-							results.add(result);
-							System.out.printf("won! : %s(%s)%n", result, LocalDateTime.now());
-						}
+					} else {
+						chunkX += 2;
 					}
 				}
 			}
+
 		}
 		long taskFinished = System.currentTimeMillis();
 		long diff = taskFinished - taskStarted;
-		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRengeX * countRengeZ,
-				(double) searchSeeds / (diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
+		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRangeX * countRangeZ,
+				searchSeeds / ((double) diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
 		return results;
 	}
 }
