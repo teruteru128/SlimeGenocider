@@ -1,6 +1,8 @@
 package com.twitter.teruteru128.mc.slime;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,74 +34,72 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 	@Override
 	public List<SearchResult> call() {
 		long initialSeed = this.initialSeed;
-		long minChunkX = this.minChunkX;
-		long maxChunkX = this.maxChunkX;
-		long minChunkZ = this.minChunkZ;
-		long maxChunkZ = this.maxChunkZ;
-		int countRengeX = this.countRengeX;
-		int countRengeZ = this.countRengeZ;
-		maxChunkX -= countRengeX - 1;
-		maxChunkX -= countRengeZ - 1;
-		int minSlimeChunks = this.minSlimeChunks;
+		final int minChunkX = (int) this.minChunkX;
+		final int maxChunkX = (int) this.maxChunkX;
+		final int minChunkZ = (int) this.minChunkZ;
+		final int maxChunkZ = (int) this.maxChunkZ;
+		final int countRangeX = this.countRengeX;
+		final int countRangeZ = this.countRengeZ;
+		final int minSlimeChunks = this.minSlimeChunks;
 		int searchSeeds = this.searchSeeds;
+		final int offsetX = -minChunkX;
+		final int offsetZ = -minChunkZ;
+		final int searchRangeX = maxChunkX - minChunkX;
+		final int searchRangeZ = maxChunkZ - minChunkZ;
+		BitSet slimeMemo = new BitSet(searchRangeX * searchRangeZ);
+		byte[][] chunkSum = new byte[searchRangeZ][searchRangeX];
 		int max = 0;
 		LinkedList<SearchResult> results = new LinkedList<>();
 		SlimeChunkOracle oracle = new SlimeChunkOracle(0);
-		long chunkX = 0;
-		long chunkZ = 0;
-		int slimeChunkCount = 0;
-		int chunkCount = 0;
+		int chunkX = 0;
+		int chunkZ = 0;
 		long currentSeed = 0;
-		int exChunkX = 0;
-		int exChunkZ = 0;
 		long taskStarted = System.currentTimeMillis();
-		long z = -1;
-		long x = -1;
+		int z = -1;
+		int x = -1;
 		for (int i = 0; i < searchSeeds; i++) {
 			currentSeed = initialSeed++;
 			oracle.setSeed(currentSeed);
-
-			// TODO DO TEST
-			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ += 2) {
-				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX += 2) {
-					if (oracle.isSlimeChunk(chunkX + 2, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ + 2)) {
-						if (oracle.isSlimeChunk(chunkX, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ)) {
-							// TODO チェックを注入可能に
-							for (z = -1; z < 1; z++) {
-								for (x = -1; x < 1; x++) {
-									slimeChunkCount = 4;
-									chunkCount = 4;
-									for (exChunkZ = 0; exChunkZ < countRengeZ; exChunkZ++) {
-										for (exChunkX = 0; exChunkX < countRengeX; exChunkX++) {
-											if ((x + exChunkX) % 2 != 0 || (z + exChunkZ) % 2 != 0) {
-												// System.out.printf("%d, %d%n", x + exChunkX, z + exChunkZ);
-												chunkCount++;
-												if (oracle.isSlimeChunk(chunkX + exChunkX + x, chunkZ + exChunkZ + z)) {
-													slimeChunkCount++;
-												}
-											}
-										}
-									}
-									max = Math.max(slimeChunkCount, max);
-									if (slimeChunkCount >= minSlimeChunks) {
-										SearchResult result = new SearchResult(currentSeed, chunkX + x, chunkZ + z,
-												slimeChunkCount, chunkCount);
-										results.add(result);
-										System.out.printf("won! : %s, %d(x=%d,z=%d,%s)%n", result, chunkCount, x, z,
-												LocalDateTime.now());
-									}
+			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ++) {
+				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {
+					boolean value = oracle.isSlimeChunk(chunkX, chunkZ);
+					// TODO getIndex関数化
+					slimeMemo.set((chunkZ + offsetZ) * searchRangeX + chunkX + offsetX, value);
+				}
+			}
+			for (chunkZ = minChunkZ + 1; chunkZ < maxChunkZ - countRangeZ + 2; chunkZ++) {
+				for (chunkX = minChunkX + 1; chunkX < maxChunkX - countRangeX + 2; chunkX++) {
+					if (slimeMemo.get((chunkZ + offsetZ + 2) * searchRangeX + chunkX + offsetX)
+							&& slimeMemo.get((chunkZ + offsetZ + 2) * searchRangeX + chunkX + offsetX + 2)) {
+						for (z = -1; z < 3; z++) {
+							for (x = -1; x < 3; x++) {
+								if (slimeMemo.get((chunkZ + offsetZ + z) * searchRangeX + chunkX + offsetX + x)) {
+									chunkSum[chunkZ + offsetZ][chunkX + offsetX] += 1;
 								}
 							}
 						}
-					} else {
-						chunkX += 2;
 					}
 				}
+			}
+			for (chunkZ = minChunkZ + 1; chunkZ < maxChunkZ; chunkZ++) {
+				for (chunkX = minChunkX + 1; chunkX < maxChunkX; chunkX++) {
+					max = Math.max(chunkSum[chunkZ + offsetZ][chunkX + offsetX], max);
+					if (chunkSum[chunkZ + offsetZ][chunkX + offsetX] >= minSlimeChunks) {
+						SearchResult result = new SearchResult(currentSeed, chunkX - 1, chunkZ - 1,
+								chunkSum[chunkZ + offsetZ][chunkX + offsetX], countRangeZ * countRangeX);
+						results.add(result);
+						System.out.printf("won! : %s(%s)%n", result, LocalDateTime.now());
+						// System.out.printf("%d%n", chunkSum[chunkZ + offsetZ][chunkX + offsetX]);
+					}
+				}
+			}
+			for (z = 0; z < searchRangeZ; z++) {
+				Arrays.fill(chunkSum[z], (byte) 0);
 			}
 		}
 		long taskFinished = System.currentTimeMillis();
 		long diff = taskFinished - taskStarted;
-		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRengeX * countRengeZ,
+		System.out.printf("task finished: max chunk is %d/%d, %.2fseeds/s %s%n", max, countRangeX * countRangeZ,
 				searchSeeds / ((double) diff / 1000), max >= minSlimeChunks ? "yay!!!" : "booooo");
 		return results;
 	}
