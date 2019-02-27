@@ -20,11 +20,11 @@ jar {
 
 def defaultEncoding = 'UTF-8'
 compileJava {
-//    options.encoding = defaultEncoding  // src/main/java配下の*.javaに影響
+    options.encoding = defaultEncoding  // src/main/java配下の*.javaに影響
                                         // JAVA_OPTS=-Dfile.encoding で代替可能
 }
 compileTestJava {
-//    options.encoding = defaultEncoding  // src/test/java配下の*.javaに影響
+    options.encoding = defaultEncoding  // src/test/java配下の*.javaに影響
                                         // JAVA_OPTS=-Dfile.encoding で代替可能
 }
 
