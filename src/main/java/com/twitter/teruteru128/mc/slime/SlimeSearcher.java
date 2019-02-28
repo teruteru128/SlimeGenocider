@@ -60,7 +60,7 @@ class SlimeSearcher implements Callable<List<SearchResult>> {
 			for (chunkZ = minChunkZ; chunkZ < maxChunkZ; chunkZ += 2) {
 				for (chunkX = minChunkX; chunkX < maxChunkX; chunkX += 2) {
 					if (oracle.isSlimeChunk(chunkX + 2, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ + 2)) {
-						if (oracle.isSlimeChunk(chunkX, chunkZ) && oracle.isSlimeChunk(chunkX + 2, chunkZ)) {
+						if (oracle.isSlimeChunk(chunkX, chunkZ) && oracle.isSlimeChunk(chunkX, chunkZ + 2)) {
 							for (z = -1; z < 1; z++) {
 								for (x = -1; x < 1; x++) {
 									slimeChunkCount = 4;
