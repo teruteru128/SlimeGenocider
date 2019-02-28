@@ -36,7 +36,7 @@ public class Main {
 		final int numberOfSections = 128;
 		final int processors = Runtime.getRuntime().availableProcessors();
 		final int useThreads = processors * 3 / 4;
-		System.out.printf("Available processors is %d, using processors is %d%n", processors);
+		System.out.printf("Available processors is %d, using processors is %d%n", processors, useThreads);
 		final int tasksPerSection = useThreads * 16;
 		final int searcherTaskSize = 65536;
 		ExecutorService service = Executors.newWorkStealingPool(useThreads);
